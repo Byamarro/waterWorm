@@ -1,13 +1,295 @@
-<head>
-  <title>Test</title>
+<title>Water parasite</title>
 
-
-</head>
-
-<body>
-
-3 2
-sadds
-testAla
-
+<body style="margin: 0px auto;">
+	<canvas id="bufferCnv" width="1000" height="600" style="display:none;"></canvas>
+	<canvas id="cnv" width="1000" height="600"></canvas>
 </body>
+<script> function resetScene(canvas, color, fadingIntensity){
+	context = canvas.getContext("2d");
+	context.globalAlpha = fadingIntensity;
+	context.fillStyle = "#000000";
+	context.fillRect(0, 0, canvas.width, canvas.height);
+	context.globalAlpha = 1;
+
+
+}
+
+
+
+function snake(x, y, size){
+	this.vx = 0;
+	this.vy = 0;
+	this.vz = 0;
+	this.x = x;
+	this.y = y;
+	this.z = 100;
+	this.particles = [];
+	this.spdLimit = 3;
+	this.createSnake = function (size){
+		for (var i = 0 ; i < size ; i++){
+			this.particles.push(new snakeBodyParticle(this.x,this.y,this.vx,this.vy,(size-i),2));
+		}
+	}
+	this.draw = function (ctx){
+		ctx.shadowBlur=5;
+		ctx.shadowColor="white";
+		ctx.globalAlpha = 0.3;
+		var snakeSize = this.particles.length;
+		for (var i = 0 ; i < snakeSize ; i++){
+			ctx.globalAlpha /= 1.5;
+			this.particles[i].draw(ctx);
+		}
+		ctx.globalAlpha = 1;
+		ctx.shadowBlur=0;
+	}
+	this.move = function (cnv){
+		var ctx = cnv.getContext("2d");
+		var snakeSize = this.particles.length;
+
+
+
+		for (var i = 0 ; i < snakeSize ; i++){
+
+
+
+			if (i==0) {
+				this.particles[i].vx = this.vx;
+				this.particles[i].vy = this.vy;
+
+			} else{
+				if ( (Math.abs(this.particles[i-1].vx)+Math.abs(this.particles[i-1].vy)) > 2  ){
+					this.particles[i].vx = (6*(this.particles[i].vx)+this.particles[i-1].vx)/7;
+					this.particles[i].vy = (6*(this.particles[i].vy)+this.particles[i-1].vy)/7;
+
+				} else {
+					//this.particles[i-1].vx += this.particles[i].vx;
+					//this.particles[i-1].vy += this.particles[i].vy;
+					this.particles[i].vx = (6*(this.particles[i].vx)+this.particles[i-1].vx)/7;
+					this.particles[i].vy = (6*(this.particles[i].vy)+this.particles[i-1].vy)/7;
+
+
+				}
+
+
+
+			}
+
+
+			if (Math.abs(this.particles[i].vx) > this.spdLimit) this.particles[i].vx = this.spdLimit*(this.particles[i].vx/Math.abs(this.particles[i].vx));
+			if (Math.abs(this.particles[i].vy) > this.spdLimit) this.particles[i].vy = this.spdLimit*(this.particles[i].vy/Math.abs(this.particles[i].vy));
+			if (Math.abs(this.particles[i].vz) > this.spdLimit) this.particles[i].vz = this.spdLimit*(this.particles[i].vz/Math.abs(this.particles[i].vz));
+			if (i==0) {
+				this.vx = this.particles[i].vx;
+				this.vy = this.particles[i].vy;
+				this.vz = this.particles[i].vz;
+
+			}
+
+
+			this.particles[i].move();
+
+
+
+
+
+
+
+			/*
+				if (this.particles[i].x > cnv.width) {this.vx *= -1;this.particles[0].x = cnv.width;}
+				if (this.particles[i].x < 0){this.vx *= -1;this.particles[0].x = 0;}
+
+				if (this.particles[i].y > cnv.height) {this.vy *= -1;this.particles[0].y = cnv.height;}
+				if (this.particles[i].y < 0) {this.vy *= -1;this.particles[0].y = 0;}
+				*/
+		}
+
+	}
+}
+
+function snakeBodyParticle(x,y,vx,vy,size,mass){
+	this.x = x;
+	this.y = y;
+	this.z = 100;
+	this.vx = vx;
+	this.vy = vy;
+	this.vz = 0;
+	this.size = size;
+	this.color = "rgba(255,255,255,255)";
+	this.mass = mass;
+
+
+	this.draw = function (context){
+		var sizeEffect = null;
+		//var sizeEffect = (this.z>1 && this.z<-1) ? 1/(this.z/10) : 1/Math.abs(this.z/10);
+		if (this.z>0) {
+			sizeEffect=this.z/100;
+		} else if (this.z<0) {
+			sizeEffect=1/Math.abs(this.z);
+		} else {
+			sizeEffect=0.01;
+		}
+		if (sizeEffect>1 && this.z<0) sizeEffect=1;
+		sizeEffect=1;
+		//var fader = 0+(this.z);
+		//context.fillStyle = "rgba("+fader+","+fader+","+fader+",255)";
+		context.fillStyle = this.color;
+		context.beginPath();
+		if (sizeEffect > 30 )console.log(sizeEffect + "this.z" + this.z);
+		context.arc(this.x,this.y,size*sizeEffect,0,2*Math.PI);
+		context.fill();
+	}
+
+	this.move = function (){
+		this.x += this.vx;
+		this.y += this.vy;
+		this.z += this.vz;
+	}
+	this.stopMove = function (){
+		this.vx += this.vy;
+		this.vy += this.vx;
+	}
+
+
+
+
+}
+
+function applyForce(physicallObject, speedLimit, forceX, forceY){
+	if ( (physicallObject.vx != undefined) && (physicallObject.vy != undefined) ){
+		physicallObject.vx =
+			((speedLimit - Math.abs((forceX+physicallObject.vx)))>=0) ?
+				physicallObject.vx+forceX :
+				speedLimit;
+		physicallObject.vy =
+			((speedLimit - Math.abs((forceY+physicallObject.vy)))>=0) ?
+				physicallObject.vy+forceY :
+				speedLimit;
+
+
+	} else {
+		console.log("Error: Object "+physicallObject+" doesn't have defined vectors.");
+	}
+}
+
+function chooseDirection(pointerX,pointerY,testPart){
+	var horizontal = false;
+	var vertical = false;
+	var deepth = false;
+	horizontal = (pointerX > testPart.particles[0].x) ? true : false;
+	vertical = (pointerY > testPart.particles[0].y) ? true : false;
+	deepth = (100 > testPart.particles[0].z) ? true : false;
+	var xSpd = Math.abs(testPart.vx) ;
+	var ySpd = Math.abs(testPart.vy);
+	var spd = xSpd+ySpd;
+
+	//if ( (testPart.vx+testPart.vy)==0 ) testPart.vx += 0.2;
+    	if (horizontal == false) {
+    		testPart.vx -= 0.1;
+
+		if ( spd<2 ) {testPart.vx += 0.1; testPart.vy += 0.2;}
+    		}
+    	if (horizontal == true) {
+    		testPart.vx += 0.1;
+    		if ( spd<2 ) {testPart.vx -= 0.1; testPart.vy -= 0.2; }
+    		}
+    	if (vertical == false) {
+    		testPart.vy -= 0.1;
+    		if ( spd<2 ) {testPart.vy -= 0.1; testPart.vx += 0.2; }
+    		}
+    	if (vertical == true) {
+    		testPart.vy += 0.1;
+    		if ( spd<2 ) {testPart.vy += 0.1; testPart.vx -= 0.2; }
+    		}
+    	if (deepth == false) {
+    		testPart.vz -= 0.1;
+    		}
+    	if (deepth == true) {
+    		testPart.vz += 0.1;
+    		}
+
+    	//console.log(testPart.vy+" "+testPart.vx);
+}
+
+function calculateDistance(pointA,pointB,optimizeOutput){
+	var output = ((pointA.x - pointB.x) * (pointA.x - pointB.x)) + ((pointA.y - pointB.y) * (pointA.y - pointB.y));
+	if (optimizeOutput) {
+		return output
+	} else {
+		return Math.sqrt(output)
+	};
+}
+
+function point2D(x,y){
+	this.x = x;
+	this.y = y;
+
+}
+
+
+
+
+var cnv = document.getElementById("cnv");
+var ctx = cnv.getContext("2d");
+var bufferCnv = document.getElementById("bufferCnv");
+var bufferCtx = bufferCnv.getContext("2d");
+var pointerX = 0;
+var pointerY = 0;
+var timeStamp = new Date();
+cnv.width = window.innerWidth;
+cnv.height = window.innerHeight;
+bufferCnv.width = window.innerWidth;
+bufferCnv.height = window.innerHeight;
+document.getElementsByTagName("body")[0].onresize = function (event) {
+	cnv.width = window.innerWidth;
+	cnv.height = window.innerHeight;
+	bufferCnv.width = window.innerWidth;
+	bufferCnv.height = window.innerHeight;
+	console.log(cnv)
+};
+
+var testPart = new snake (200,200);
+testPart.createSnake(15);
+//console.low(testPart);
+init();
+
+
+cnv.onmousemove = pointerReader;
+function pointerReader (e) {
+	pointerX = e.clientX;
+	pointerY = e.clientY;
+}
+
+
+
+function checkKey(e) {
+    var event = window.event ? window.event : e;
+    //console.log(e.keyCode);
+    detectDirection(pointerX,pointerY,snake);
+    switch (e.keyCode) {
+
+    }
+}
+
+function init (){
+	resetScene(bufferCnv,"#000000");
+
+	//bufferCtx.globalCompositeOperation = 'soft-light';
+	applyForce(testPart,2,1,1);
+	setInterval(frame,10);
+
+}
+function frame (){
+	chooseDirection(pointerX,pointerY,testPart);
+	renderScene();
+}
+function renderScene(){
+	if ( (timeStamp-(new Date()))<10 ) {
+		resetScene(bufferCnv,"#000000",0.18);
+		testPart.draw(bufferCtx);
+		testPart.move(bufferCnv);
+		ctx.drawImage(bufferCnv,0,0);
+	}
+	timeStamp = new Date();
+}
+
+</script>
